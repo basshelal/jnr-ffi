@@ -23,14 +23,31 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Converts data from a Java type to a native type
+ *
+ * @param <J> the Java Type
+ * @param <N> the native Type
+ */
 public interface ToNativeConverter<J, N> {
+    /**
+     * Converts a Java value of type {@code J} to a native value of type {@code N}
+     *
+     * @param value   the Java value to convert
+     * @param context the {@link ToNativeContext} which can be used by overriding classes, see {@link ToNativeContext}
+     * @return the converted native value
+     */
     public N toNative(J value, ToNativeContext context);
+
+    /**
+     * @return The {@link Class} of this native type {@code N}
+     */
     public Class<N> nativeType();
 
     /**
      * Used to reload a parameter converted to a native type via a custom {@link jnr.ffi.mapper.ToNativeConverter}
      */
-    public static interface PostInvocation<J,N> extends ToNativeConverter<J, N> {
+    public static interface PostInvocation<J, N> extends ToNativeConverter<J, N> {
         public void postInvoke(J j, N n, ToNativeContext context);
     }
 

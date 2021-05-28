@@ -24,7 +24,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Converts data from a native type to a java type
+ * Converts data from a native type to a Java type
+ *
+ * @param <J> The Java type
+ * @param <N> The native type
  */
 public interface FromNativeConverter<J, N> {
     public J fromNative(N nativeValue, FromNativeContext context);

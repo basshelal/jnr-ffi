@@ -19,7 +19,7 @@
 package jnr.ffi.mapper;
 
 /**
- * Adapts a {@link jnr.ffi.mapper.TypeMapper} to a SignatureTypeMapper
+ * Adapts a {@link jnr.ffi.mapper.TypeMapper} to a {@link SignatureTypeMapper}
  */
 public class SignatureTypeMapperAdapter implements SignatureTypeMapper {
     private final TypeMapper typeMapper;

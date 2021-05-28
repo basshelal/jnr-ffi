@@ -23,16 +23,12 @@ import java.util.Collection;
 
 public interface ToNativeContext {
     /**
-     * Gets a sorted list of annotations
-     *
      * @return a sorted list of annotations for this native type
      */
     public abstract Collection<Annotation> getAnnotations();
 
     /**
-     * Gets the <code>Runtime</code> used for the conversion.
-     *
-     * @return The runtime used for the conversion.
+     * @return The {@link jnr.ffi.Runtime} used for the conversion.
      */
     public jnr.ffi.Runtime getRuntime();
 }
