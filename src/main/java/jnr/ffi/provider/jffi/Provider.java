@@ -21,7 +21,9 @@ package jnr.ffi.provider.jffi;
 import jnr.ffi.Runtime;
 import jnr.ffi.provider.FFIProvider;
 
-
+/**
+ * A valid {@link FFIProvider}
+ */
 public final class Provider extends FFIProvider {
     private final NativeRuntime runtime;
     

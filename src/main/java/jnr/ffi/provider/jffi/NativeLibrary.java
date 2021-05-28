@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
 public class NativeLibrary {
     private final List<String> libraryNames;
     private final List<String> searchPaths;
-    
+
     private volatile List<com.kenai.jffi.Library> nativeLibraries = Collections.emptyList();
 
     NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths) {
@@ -46,14 +46,19 @@ public class NativeLibrary {
         this.searchPaths = Collections.unmodifiableList(new ArrayList<String>(searchPaths));
     }
 
+    // TODO: 28-May-2021 @basshelal: Can be safely removed, just use Platform function in its place
+    //  what this function actually does is more confusing
     private String locateLibrary(String libraryName) {
-        if (new File(libraryName).isAbsolute()) {
+        if (new File(libraryName).isAbsolute()) { // why ignore if absolute? Doesn't actually test existence
             return libraryName;
         }
 
         return Platform.getNativePlatform().locateLibrary(libraryName, searchPaths);
     }
 
+    /**
+     * Gets the address of a symbol with the given name, 0 means the address was not found
+     */
     long getSymbolAddress(String name) {
         for (com.kenai.jffi.Library l : getNativeLibraries()) {
             long address = l.getSymbolAddress(name);
@@ -64,6 +69,9 @@ public class NativeLibrary {
         return 0;
     }
 
+    /**
+     * Same as {@link #getSymbolAddress(String)} except throws a {@link SymbolNotFoundError} if the symbol was not found
+     */
     long findSymbolAddress(String name) {
         long address = getSymbolAddress(name);
         if (address == 0) {
@@ -79,9 +87,12 @@ public class NativeLibrary {
         return nativeLibraries = loadNativeLibraries();
     }
 
+    /**
+     * Loads all entries from {@link #libraryNames} into {@link Library}s and returns that list
+     */
     private synchronized List<com.kenai.jffi.Library> loadNativeLibraries() {
         List<com.kenai.jffi.Library> libs = new ArrayList<com.kenai.jffi.Library>();
-        
+
         for (String libraryName : libraryNames) {
             if (libraryName.equals(LibraryLoader.DEFAULT_LIBRARY)) {
                 libs.add(Library.getDefault());
@@ -90,10 +101,12 @@ public class NativeLibrary {
 
             com.kenai.jffi.Library lib;
 
+            // try opening ignoring searchPaths AND any name mapping, so just literal given name
             lib = openLibrary(libraryName);
             if (lib == null) {
                 String path;
                 if (libraryName != null && (path = locateLibrary(libraryName)) != null && !libraryName.equals(path)) {
+                    // try opening after using locateLibrary(), will map and use searchPaths
                     lib = openLibrary(path);
                 }
             }
@@ -109,6 +122,12 @@ public class NativeLibrary {
     private static final Pattern BAD_ELF = Pattern.compile("(.*): (invalid ELF header|file too short|invalid file format)");
     private static final Pattern ELF_GROUP = Pattern.compile("GROUP\\s*\\(\\s*(\\S*).*\\)");
 
+    /**
+     * Tries to open the library with the given path
+     *
+     * @param path the absolute path or name of the library to open
+     * @return the {@link Library} if successfully found, or {@code null} otherwise
+     */
     private static com.kenai.jffi.Library openLibrary(String path) {
         com.kenai.jffi.Library lib;
 
@@ -116,7 +135,7 @@ public class NativeLibrary {
         if (lib != null) {
             return lib;
         }
-        
+
         // If dlopen() fails with 'invalid ELF header', then it is likely to be a ld script - parse it for the real library path
         Matcher badElf = BAD_ELF.matcher(com.kenai.jffi.Library.getLastError());
         if (badElf.lookingAt()) {
@@ -128,7 +147,7 @@ public class NativeLibrary {
                 }
             }
         }
-        
+
         return null;
     }
     

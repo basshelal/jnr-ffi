@@ -27,7 +27,9 @@ import jnr.ffi.TypeAlias;
 import java.nio.ByteOrder;
 
 /**
- * A {@link jnr.ffi.Runtime} subclass that throws exceptions for all methods
+ * An invalid {@link jnr.ffi.Runtime} subclass that throws exceptions for all methods
+ *
+ * @see jnr.ffi.provider.jffi.NativeRuntime
  */
 class InvalidRuntime extends Runtime {
     private final String message;

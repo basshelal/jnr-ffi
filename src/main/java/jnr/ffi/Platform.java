@@ -402,9 +402,7 @@ public abstract class Platform {
      * @return The mapped library name.
      */
     public String mapLibraryName(String libName) {
-        //
         // A specific version was requested - use as is for search
-        //
         if (libPattern.matcher(libName).find()) {
             return libName;
         }

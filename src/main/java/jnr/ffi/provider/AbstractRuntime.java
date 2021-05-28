@@ -26,9 +26,6 @@ import java.nio.ByteOrder;
 import java.util.EnumMap;
 import java.util.EnumSet;
 
-/**
- *
- */
 public abstract class AbstractRuntime extends Runtime {
     private final Type[] types;
     private final long addressMask;

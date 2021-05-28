@@ -55,6 +55,8 @@ import java.nio.ByteOrder;
  *     library.write(1, buffer, bytes.length);
  *     }
  *     </pre>
+ *
+ * @see jnr.ffi.provider.jffi.NativeRuntime
  */
 public abstract class Runtime {
 

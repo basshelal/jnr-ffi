@@ -25,6 +25,12 @@ import jnr.ffi.Runtime;
 import java.util.Collection;
 import java.util.Map;
 
+/**
+ * The invalid {@link FFIProvider} which is returned only if an error occurred when trying
+ * to return a valid {@link FFIProvider}. This class is essentially unusable and will throw exceptions.
+ *
+ * @see jnr.ffi.provider.jffi.Provider
+ */
 final class InvalidProvider extends FFIProvider {
     private final String message;
     private final Throwable cause;

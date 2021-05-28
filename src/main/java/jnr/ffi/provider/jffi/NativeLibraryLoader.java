@@ -26,7 +26,7 @@ import java.util.Map;
 import static jnr.ffi.provider.jffi.Util.getBooleanProperty;
 
 /**
- *
+ * A valid {@link jnr.ffi.LibraryLoader}
  */
 class NativeLibraryLoader<T>  extends jnr.ffi.LibraryLoader<T> {
     static final boolean ASM_ENABLED = getBooleanProperty("jnr.ffi.asm.enabled", true);
