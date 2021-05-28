@@ -40,7 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * A valid {@link Runtime}
  */
 public final class NativeRuntime extends AbstractRuntime {
     private final NativeMemoryManager mm = new NativeMemoryManager(this);

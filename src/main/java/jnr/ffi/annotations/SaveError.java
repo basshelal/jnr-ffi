@@ -33,5 +33,6 @@ import java.util.Map;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface SaveError {
-
+    // TODO: 27-May-2021 @basshelal: This should either have a METHOD target or when used on an interface, apply to
+    //  all methods in interface, same for @IgnoreError
 }
