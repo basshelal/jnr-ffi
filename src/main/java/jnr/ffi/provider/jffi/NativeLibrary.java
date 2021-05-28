@@ -35,7 +35,15 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class NativeLibrary {
+/**
+ * Represents a native library with potentially multiple names and multiple paths
+ *
+ * This is basically a wrapper around {@link com.kenai.jffi.Library} with some added functionality to support
+ * multiple names and paths
+ *
+ * <strong>You should probably not be using this class directly</strong>
+ */
+class NativeLibrary {
     private final List<String> libraryNames;
     private final List<String> searchPaths;
 
@@ -46,13 +54,7 @@ public class NativeLibrary {
         this.searchPaths = Collections.unmodifiableList(new ArrayList<String>(searchPaths));
     }
 
-    // TODO: 28-May-2021 @basshelal: Can be safely removed, just use Platform function in its place
-    //  what this function actually does is more confusing
     private String locateLibrary(String libraryName) {
-        if (new File(libraryName).isAbsolute()) { // why ignore if absolute? Doesn't actually test existence
-            return libraryName;
-        }
-
         return Platform.getNativePlatform().locateLibrary(libraryName, searchPaths);
     }
 
@@ -150,7 +152,7 @@ public class NativeLibrary {
 
         return null;
     }
-    
+
     private static String readAll(File f) {
         BufferedReader br = null;
         try {
@@ -166,7 +168,7 @@ public class NativeLibrary {
 
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
-        
+
         } finally {
             if (br != null) try { br.close(); } catch (IOException e) { throw new RuntimeException(e); }
         }
