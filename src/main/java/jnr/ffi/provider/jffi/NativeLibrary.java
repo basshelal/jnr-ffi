@@ -36,22 +36,30 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Represents a native library with potentially multiple names and multiple paths
+ * Represents a native library made up of potentially multiple native library files to create a "composite library".
+ * This represents a single Java mapped interface which could be made up of multiple native library files.
  *
- * This is basically a wrapper around {@link com.kenai.jffi.Library} with some added functionality to support
- * multiple names and paths
+ * This is basically a wrapper around {@link com.kenai.jffi.Library} with added functionality for multiple library
+ * file support
  *
- * <strong>You should probably not be using this class directly</strong>
+ * <strong>You should not be using this class directly</strong>
  */
 class NativeLibrary {
     private final List<String> libraryNames;
     private final List<String> searchPaths;
+    private final List<String> successfulPaths = new ArrayList<>();
 
     private volatile List<com.kenai.jffi.Library> nativeLibraries = Collections.emptyList();
 
     NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths) {
-        this.libraryNames = Collections.unmodifiableList(new ArrayList<String>(libraryNames));
-        this.searchPaths = Collections.unmodifiableList(new ArrayList<String>(searchPaths));
+        this.libraryNames = Collections.unmodifiableList(new ArrayList<>(libraryNames));
+        this.searchPaths = Collections.unmodifiableList(new ArrayList<>(searchPaths));
+    }
+
+    // TODO: 29-May-2021 @basshelal: Draft constructor that allows library to be loaded eagerly!
+    NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths, boolean loadNow) {
+        this(libraryNames, searchPaths);
+        if (loadNow) loadNativeLibraries();
     }
 
     private String locateLibrary(String libraryName) {
@@ -82,6 +90,16 @@ class NativeLibrary {
         return address;
     }
 
+    /**
+     * @return an unmodifiable list of the paths that were loaded successfully, empty if none were successful
+     */
+    // TODO: 29-May-2021 @basshelal: Not yet public API, need to figure out where to place this for consumers to call,
+    //  Runtime or LibraryLoader are a good candidate, but remember this class is only used when Library is loaded
+    //  using ReflectionLibraryLoader which is not by default!
+    List<String> getSuccessfulPaths() {
+        return Collections.unmodifiableList(successfulPaths);
+    }
+
     private synchronized List<com.kenai.jffi.Library> getNativeLibraries() {
         if (!this.nativeLibraries.isEmpty()) {
             return nativeLibraries;
@@ -104,12 +122,12 @@ class NativeLibrary {
             com.kenai.jffi.Library lib;
 
             // try opening ignoring searchPaths AND any name mapping, so just literal given name
-            lib = openLibrary(libraryName);
+            lib = openLibrary(libraryName, successfulPaths);
             if (lib == null) {
                 String path;
                 if (libraryName != null && (path = locateLibrary(libraryName)) != null && !libraryName.equals(path)) {
                     // try opening after using locateLibrary(), will map and use searchPaths
-                    lib = openLibrary(path);
+                    lib = openLibrary(path, successfulPaths);
                 }
             }
             if (lib == null) {
@@ -127,14 +145,16 @@ class NativeLibrary {
     /**
      * Tries to open the library with the given path
      *
-     * @param path the absolute path or name of the library to open
+     * @param path            the absolute path or name of the library to open
+     * @param successfulPaths will be populated with paths of libraries that loaded successfully
      * @return the {@link Library} if successfully found, or {@code null} otherwise
      */
-    private static com.kenai.jffi.Library openLibrary(String path) {
+    private static com.kenai.jffi.Library openLibrary(String path, List<String> successfulPaths) {
         com.kenai.jffi.Library lib;
 
         lib = com.kenai.jffi.Library.getCachedInstance(path, com.kenai.jffi.Library.LAZY | com.kenai.jffi.Library.GLOBAL);
         if (lib != null) {
+            successfulPaths.add(path);
             return lib;
         }
 
@@ -145,7 +165,9 @@ class NativeLibrary {
             if (f.isFile() && f.length() < (4 * 1024)) {
                 Matcher sharedObject = ELF_GROUP.matcher(readAll(f));
                 if (sharedObject.find()) {
-                    return com.kenai.jffi.Library.getCachedInstance(sharedObject.group(1), com.kenai.jffi.Library.LAZY | com.kenai.jffi.Library.GLOBAL);
+                    lib = com.kenai.jffi.Library.getCachedInstance(sharedObject.group(1), com.kenai.jffi.Library.LAZY | com.kenai.jffi.Library.GLOBAL);
+                    if (lib != null) successfulPaths.add(path);
+                    return lib;
                 }
             }
         }

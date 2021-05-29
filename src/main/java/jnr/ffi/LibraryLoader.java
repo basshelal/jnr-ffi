@@ -165,9 +165,9 @@ public abstract class LibraryLoader<T> {
             }
         }
 
-        for (Map.Entry<LibraryOption, ?> option : libraryOptions.entrySet()) {
-            loader.option(option.getKey(), option.getValue());
-        }
+       if (libraryOptions != null) for (Map.Entry<LibraryOption, ?> option : libraryOptions.entrySet()) {
+           loader.option(option.getKey(), option.getValue());
+       }
 
         return loader.failImmediately().load();
     }

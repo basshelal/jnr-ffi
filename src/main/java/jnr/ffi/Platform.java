@@ -490,9 +490,7 @@ public abstract class Platform {
 
         @Override
         public String mapLibraryName(String libName) {
-            //
             // A specific version was requested - use as is for search
-            //
             if (libPattern.matcher(libName).find()) {
                 return libName;
             }
@@ -520,10 +518,10 @@ public abstract class Platform {
             // there are /libx32 directories in wild on ubuntu 14.04 and the
             // oracle-java8-installer package
             if (getCPU() == CPU.X86_64) {
-                exclude = Pattern.compile(".*(lib[a-z]*32|i[0-9]86).*");
+                exclude = Pattern.compile(".*(lib[a-z]*32|i[0-9]86).*"); // ignore 32 bit libs on 64-bit
             }
             else {
-                exclude = Pattern.compile(".*(lib[a-z]*64|amd64|x86_64).*");
+                exclude = Pattern.compile(".*(lib[a-z]*64|amd64|x86_64).*"); // ignore 64 bit libs on 32-bit
             }
 
             final Pattern versionedLibPattern = Pattern.compile("lib" + libName + "\\.so((?:\\.[0-9]+)*)$");
@@ -563,13 +561,16 @@ public abstract class Platform {
                 }
             }
 
-            //
+            // TODO: 29-May-2021 @basshelal: Issue #239
+            //  Below let custom path be preferred over system paths (found in LibraryLoader.DefaultLibPaths)
+            //  even if version is higher.
+            //  If we can add a LibraryOption for this then here is where it will be used
+
             // Search through the results and return the highest numbered version
-            // i.e. libc.so.6 is preferred over libc.so.5
-            //
+            // i.e. libc.so.6 is preferred over libc.so.5 or libc.so
             int[] bestVersion = null;
             String bestMatch = null;
-            for (Map.Entry<String,int[]> entry : matches.entrySet()) {
+            for (Map.Entry<String, int[]> entry : matches.entrySet()) {
                 String file = entry.getKey();
                 int[] fileVersion = entry.getValue();
 
@@ -602,13 +603,7 @@ public abstract class Platform {
             }
 
             // If all components are equal, version with fewest components is smallest
-            if (version1.length < version2.length) {
-                return -1;
-            } else if (version1.length > version2.length) {
-                return 1;
-            } else {
-                return 0;
-            }
+            return Integer.compare(version1.length, version2.length);
         }
 
         @Override
