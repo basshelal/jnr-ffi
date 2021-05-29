@@ -56,7 +56,6 @@ class NativeLibrary {
         this.searchPaths = Collections.unmodifiableList(new ArrayList<>(searchPaths));
     }
 
-    // TODO: 29-May-2021 @basshelal: Draft constructor that allows library to be loaded eagerly!
     NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths, boolean loadNow) {
         this(libraryNames, searchPaths);
         if (loadNow) loadNativeLibraries();
@@ -131,7 +130,8 @@ class NativeLibrary {
                 }
             }
             if (lib == null) {
-                throw new UnsatisfiedLinkError(com.kenai.jffi.Library.getLastError());
+                throw new UnsatisfiedLinkError(com.kenai.jffi.Library.getLastError() +
+                        "\nSearch paths:\n" + searchPaths.toString());
             }
             libs.add(lib);
         }
