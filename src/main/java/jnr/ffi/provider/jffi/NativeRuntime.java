@@ -52,9 +52,7 @@ public final class NativeRuntime extends AbstractRuntime {
 
     private final Type[] aliases;
 
-    // TODO: 29-May-2021 @basshelal: What if library was unloaded?? Do we remove it? That's quite complicated to keep
-    //  track of
-    private final LinkedHashMap<List<String>, List<String>> loadedLibraryPaths = new LinkedHashMap<>();
+    final LinkedHashMap<List<String>, List<String>> loadedLibraryPaths = new LinkedHashMap<>();
 
     public static NativeRuntime getInstance() {
         return SingletonHolder.INSTANCE;
@@ -118,17 +116,6 @@ public final class NativeRuntime extends AbstractRuntime {
         }
 
         return aliases;
-    }
-
-    /**
-     * Call this upon loading a {@link NativeLibrary} to register the paths where it was loaded successfully
-     *
-     * @param libraryNames    the names of the {@link NativeLibrary}
-     * @param successfulPaths the successful paths of the {@link NativeLibrary}
-     */
-    void addSuccessfulLibraryPaths(List<String> libraryNames, List<String> successfulPaths) {
-        // put instead of putIfAbsent because library can be loaded with same name later and have different paths
-        this.loadedLibraryPaths.put(libraryNames, successfulPaths);
     }
 
     @Override

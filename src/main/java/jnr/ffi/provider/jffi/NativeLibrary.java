@@ -22,6 +22,7 @@ import com.kenai.jffi.Library;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Platform;
 import jnr.ffi.Runtime;
+import jnr.ffi.provider.AbstractRuntime;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -43,7 +44,9 @@ import java.util.regex.Pattern;
  * This is basically a wrapper around {@link com.kenai.jffi.Library} with added functionality for multiple library
  * file support
  *
- * <strong>You should not be using this class directly</strong>
+ * An interface mapping of a library loaded with {@link AsmLibraryLoader} will always implement
+ * {@link AbstractAsmLibraryInterface} which contains a strong reference to the {@link NativeLibrary} representing
+ * the loaded library, see {@link AbstractAsmLibraryInterface#getLibrary()}
  */
 class NativeLibrary {
     private final List<String> libraryNames;
@@ -124,8 +127,8 @@ class NativeLibrary {
             libs.add(lib);
         }
         if (Runtime.getSystemRuntime() instanceof NativeRuntime) {
-            ((NativeRuntime) Runtime.getSystemRuntime())
-                    .addSuccessfulLibraryPaths(this.libraryNames, this.successfulPaths);
+            ((NativeRuntime) Runtime.getSystemRuntime()).loadedLibraryPaths.put(this.libraryNames, this.successfulPaths);
+            // put instead of putIfAbsent because library can be loaded with same name later and have different paths
         }
 
         return Collections.unmodifiableList(libs);
@@ -185,6 +188,19 @@ class NativeLibrary {
 
         } finally {
             if (br != null) try { br.close(); } catch (IOException e) { throw new RuntimeException(e); }
+        }
+    }
+
+    /**
+     * This {@link NativeLibrary} has been unloaded because the object instance of the interface mapping of the
+     * library has been GC'd, thus we can now safely remove any references to this library's existence
+     */
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            ((NativeRuntime) Runtime.getSystemRuntime()).loadedLibraryPaths.remove(this.libraryNames);
+        } finally {
+            super.finalize();
         }
     }
 }

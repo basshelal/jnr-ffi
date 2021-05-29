@@ -35,6 +35,7 @@ public abstract class AbstractAsmLibraryInterface implements LoadedLibrary {
         this.library = library;
     }
 
+    @Override
     public final jnr.ffi.Runtime getRuntime() {
         return runtime;
     }
