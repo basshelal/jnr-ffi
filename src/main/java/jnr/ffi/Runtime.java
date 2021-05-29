@@ -24,6 +24,8 @@ import jnr.ffi.provider.LoadedLibrary;
 import jnr.ffi.provider.MemoryManager;
 
 import java.nio.ByteOrder;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Access JNR runtime functionality.
@@ -183,4 +185,10 @@ public abstract class Runtime {
      * @return true if the other runtime is compatible with this one
      */
     public abstract boolean isCompatible(jnr.ffi.Runtime other);
+
+    // TODO: 29-May-2021 @basshelal: document and test!
+    // TODO: 29-May-2021 @basshelal: Is library names actually a good unique key?
+    //  technically I can load multiple libC instances with different interfaces and paths so this mapping doesn't
+    //  accommodate this extreme contrivance
+    public abstract Map<List<String>, List<String>> getLoadedLibraryPaths();
 }

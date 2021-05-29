@@ -373,14 +373,19 @@ public abstract class LibraryLoader<T> {
     }
 
     /**
-     * Turns off lazy propagation of load failures.  By default, {@link jnr.ffi.LibraryLoader#load()} will not fail 
-     * immediately if any libraries cannot be loaded - instead, it will create an instance of the library interface 
+     * Turns off lazy propagation of load failures.  By default, {@link jnr.ffi.LibraryLoader#load()} will not fail
+     * immediately if any libraries cannot be loaded - instead, it will create an instance of the library interface
      * that re-throws any load errors when invoked.
-     * 
+     *
      * Calling this method will make {@link jnr.ffi.LibraryLoader#load()} throw errors immediately.
      *
      * @return This {@code LibraryLoader} instance.
      */
+    // TODO: 29-May-2021 @basshelal: Only applicable when ReflectionLibraryLoader is used,
+    //  add this to documentation! Or alternatively, deprecate in favor of LibraryOption.LoadNow, though its
+    //  technically a little different, LibraryOption.LoadNow applies to library loading like dlopen() but
+    //  failImmediately is only currently used in ReflectionLibraryLoader to determine whether or not to immediately
+    //  start binding or not
     public final LibraryLoader<T> failImmediately() {
         failImmediately = true;
         return this;

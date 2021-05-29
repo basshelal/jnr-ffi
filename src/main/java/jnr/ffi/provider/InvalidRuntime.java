@@ -25,6 +25,8 @@ import jnr.ffi.Type;
 import jnr.ffi.TypeAlias;
 
 import java.nio.ByteOrder;
+import java.util.List;
+import java.util.Map;
 
 /**
  * An invalid {@link jnr.ffi.Runtime} subclass that throws exceptions for all methods
@@ -97,6 +99,11 @@ class InvalidRuntime extends Runtime {
 
     @Override
     public boolean isCompatible(Runtime other) {
+        throw newLoadError();
+    }
+
+    @Override
+    public Map<List<String>, List<String>> getLoadedLibraryPaths() {
         throw newLoadError();
     }
 

@@ -21,6 +21,7 @@ package jnr.ffi.provider.jffi;
 import com.kenai.jffi.Library;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Platform;
+import jnr.ffi.Runtime;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -51,14 +52,10 @@ class NativeLibrary {
 
     private volatile List<com.kenai.jffi.Library> nativeLibraries = Collections.emptyList();
 
-    NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths) {
+    NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths, boolean loadNow) {
         this.libraryNames = Collections.unmodifiableList(new ArrayList<>(libraryNames));
         this.searchPaths = Collections.unmodifiableList(new ArrayList<>(searchPaths));
-    }
-
-    NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths, boolean loadNow) {
-        this(libraryNames, searchPaths);
-        if (loadNow) loadNativeLibraries();
+        if (loadNow) getNativeLibraries();
     }
 
     private String locateLibrary(String libraryName) {
@@ -89,16 +86,6 @@ class NativeLibrary {
         return address;
     }
 
-    /**
-     * @return an unmodifiable list of the paths that were loaded successfully, empty if none were successful
-     */
-    // TODO: 29-May-2021 @basshelal: Not yet public API, need to figure out where to place this for consumers to call,
-    //  Runtime or LibraryLoader are a good candidate, but remember this class is only used when Library is loaded
-    //  using ReflectionLibraryLoader which is not by default!
-    List<String> getSuccessfulPaths() {
-        return Collections.unmodifiableList(successfulPaths);
-    }
-
     private synchronized List<com.kenai.jffi.Library> getNativeLibraries() {
         if (!this.nativeLibraries.isEmpty()) {
             return nativeLibraries;
@@ -108,6 +95,7 @@ class NativeLibrary {
 
     /**
      * Loads all entries from {@link #libraryNames} into {@link Library}s and returns that list
+     * Theoretically, this should only ever be called once in a library's lifetime, upon first call of {@link #getNativeLibraries()}
      */
     private synchronized List<com.kenai.jffi.Library> loadNativeLibraries() {
         List<com.kenai.jffi.Library> libs = new ArrayList<com.kenai.jffi.Library>();
@@ -134,6 +122,10 @@ class NativeLibrary {
                         "\nSearch paths:\n" + searchPaths.toString());
             }
             libs.add(lib);
+        }
+        if (Runtime.getSystemRuntime() instanceof NativeRuntime) {
+            ((NativeRuntime) Runtime.getSystemRuntime())
+                    .addSuccessfulLibraryPaths(this.libraryNames, this.successfulPaths);
         }
 
         return Collections.unmodifiableList(libs);
