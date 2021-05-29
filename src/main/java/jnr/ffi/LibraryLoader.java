@@ -479,8 +479,13 @@ public abstract class LibraryLoader<T> {
                 in = new BufferedReader(new FileReader(file));
                 String line = in.readLine();
                 while (line != null) {
-                    // add even if doesn't exist! We're just adding the default paths, we check for validity elsewhere
-                    paths.add(line);
+                    // TODO: 29-May-2021 @basshelal: If line starts with include we should handle it appropriately I think
+                    // ignore empties and comments and include directives
+                    if (!line.isEmpty() && !line.trim().isEmpty()
+                            && !line.startsWith("#") && !line.startsWith("include ")) {
+                        // add even if doesn't exist! We're just adding the default paths, we check for validity elsewhere
+                        paths.add(line);
+                    }
                     line = in.readLine();
                 }
             }
