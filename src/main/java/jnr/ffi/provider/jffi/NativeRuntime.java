@@ -18,6 +18,7 @@
 
 package jnr.ffi.provider.jffi;
 
+import jnr.ffi.LoadedLibraryData;
 import jnr.ffi.NativeType;
 import jnr.ffi.ObjectReferenceManager;
 import jnr.ffi.Platform;
@@ -32,13 +33,14 @@ import jnr.ffi.provider.DefaultObjectReferenceManager;
 
 import java.lang.reflect.Field;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -52,10 +54,20 @@ public final class NativeRuntime extends AbstractRuntime {
 
     private final Type[] aliases;
 
-    final LinkedHashMap<List<String>, List<String>> loadedLibraryPaths = new LinkedHashMap<>();
+    // WeakHashMap to auto remove GC'd NativeLibraries
+    final WeakHashMap<NativeLibrary, LoadedLibraryData> loadedLibraries = new WeakHashMap<>();
 
     public static NativeRuntime getInstance() {
         return SingletonHolder.INSTANCE;
+    }
+
+    /**
+     * See and use {@link Runtime#getLoadedLibraries()} (which forwards here) instead of this directly
+     */
+    public static List<LoadedLibraryData> getLoadedLibraries() {
+        if (getSystemRuntime() instanceof NativeRuntime) {
+            return new ArrayList<>(((NativeRuntime) getSystemRuntime()).loadedLibraries.values());
+        } else return Collections.emptyList();
     }
 
     private static final class SingletonHolder {
@@ -150,11 +162,6 @@ public final class NativeRuntime extends AbstractRuntime {
     @Override
     public boolean isCompatible(Runtime other) {
         return other instanceof NativeRuntime;
-    }
-
-    @Override
-    public Map<List<String>, List<String>> getLoadedLibraryPaths() {
-        return new HashMap<>(loadedLibraryPaths);
     }
 
     @Override

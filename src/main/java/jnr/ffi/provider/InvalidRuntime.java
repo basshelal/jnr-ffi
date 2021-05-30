@@ -102,11 +102,6 @@ class InvalidRuntime extends Runtime {
         throw newLoadError();
     }
 
-    @Override
-    public Map<List<String>, List<String>> getLoadedLibraryPaths() {
-        throw newLoadError();
-    }
-
     private UnsatisfiedLinkError newLoadError() {
         UnsatisfiedLinkError error = new UnsatisfiedLinkError(message);
         error.initCause(cause);

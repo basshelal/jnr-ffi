@@ -20,9 +20,9 @@ package jnr.ffi.provider.jffi;
 
 import com.kenai.jffi.Library;
 import jnr.ffi.LibraryLoader;
+import jnr.ffi.LoadedLibraryData;
 import jnr.ffi.Platform;
 import jnr.ffi.Runtime;
-import jnr.ffi.provider.AbstractRuntime;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -104,6 +104,7 @@ class NativeLibrary {
         List<com.kenai.jffi.Library> libs = new ArrayList<com.kenai.jffi.Library>();
 
         for (String libraryName : libraryNames) {
+            if (libraryName == null) continue;
             if (libraryName.equals(LibraryLoader.DEFAULT_LIBRARY)) {
                 libs.add(Library.getDefault());
                 continue;
@@ -115,21 +116,19 @@ class NativeLibrary {
             lib = openLibrary(libraryName, successfulPaths);
             if (lib == null) {
                 String path;
-                if (libraryName != null && (path = locateLibrary(libraryName)) != null && !libraryName.equals(path)) {
+                if ((path = locateLibrary(libraryName)) != null && !libraryName.equals(path)) {
                     // try opening after using locateLibrary(), will map and use searchPaths
                     lib = openLibrary(path, successfulPaths);
                 }
             }
             if (lib == null) {
                 throw new UnsatisfiedLinkError(com.kenai.jffi.Library.getLastError() +
+                        "\nLibrary names\n" + libraryNames.toString() +
                         "\nSearch paths:\n" + searchPaths.toString());
             }
             libs.add(lib);
         }
-        if (Runtime.getSystemRuntime() instanceof NativeRuntime) {
-            ((NativeRuntime) Runtime.getSystemRuntime()).loadedLibraryPaths.put(this.libraryNames, this.successfulPaths);
-            // put instead of putIfAbsent because library can be loaded with same name later and have different paths
-        }
+        putLibraryIntoRuntime(); // successfulPaths have been set and library has been loaded
 
         return Collections.unmodifiableList(libs);
     }
@@ -191,16 +190,10 @@ class NativeLibrary {
         }
     }
 
-    /**
-     * This {@link NativeLibrary} has been unloaded because the object instance of the interface mapping of the
-     * library has been GC'd, thus we can now safely remove any references to this library's existence
-     */
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            ((NativeRuntime) Runtime.getSystemRuntime()).loadedLibraryPaths.remove(this.libraryNames);
-        } finally {
-            super.finalize();
+    private void putLibraryIntoRuntime() {
+        if (Runtime.getSystemRuntime() instanceof NativeRuntime) {
+            ((NativeRuntime) Runtime.getSystemRuntime())
+                    .loadedLibraries.put(this, new LoadedLibraryData(libraryNames, searchPaths, successfulPaths));
         }
     }
 }

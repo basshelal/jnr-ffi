@@ -22,10 +22,10 @@ import jnr.ffi.provider.ClosureManager;
 import jnr.ffi.provider.FFIProvider;
 import jnr.ffi.provider.LoadedLibrary;
 import jnr.ffi.provider.MemoryManager;
+import jnr.ffi.provider.jffi.NativeRuntime;
 
 import java.nio.ByteOrder;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Access JNR runtime functionality.
@@ -81,7 +81,31 @@ public abstract class Runtime {
         return ((LoadedLibrary) library).getRuntime();
     }
 
-    /** singleton holder for the default Runtime */
+    /**
+     * Gets a list of {@link LoadedLibraryData} which represents all currently loaded libraries, or an empty list if
+     * none are loaded.
+     * <br>
+     * A library is <i>"loaded"</i> if the native library's file (.so, .dylib, .dll etc) was opened and loaded into
+     * memory successfully, ie a call to {@code dlopen()} was successful. If you don't see a library here then either:
+     * <ul>
+     *     <li>It failed to load and threw an {@link UnsatisfiedLinkError}</li>
+     *     <li>It has not yet loaded because it is being loaded lazily, ie, upon needing to be used, you can
+     *     disable this behavior by using {@link LibraryOption#LoadNow} at load time</li>
+     * </ul>
+     *
+     * When a library is unloaded (all references to your interface mapping have been GC'd), calling this method
+     * again will reflect the unload and you will no longer see the unloaded library.
+     *
+     * @return the list of {@link LoadedLibraryData} which represents all currently loaded libraries
+     * @see LoadedLibraryData
+     */
+    public static List<LoadedLibraryData> getLoadedLibraries() {
+        return NativeRuntime.getLoadedLibraries();
+    }
+
+    /**
+     * singleton holder for the default Runtime
+     */
     private static final class SingletonHolder {
         public static final Runtime SYSTEM_RUNTIME = FFIProvider.getSystemProvider().getRuntime();
     }
@@ -186,9 +210,4 @@ public abstract class Runtime {
      */
     public abstract boolean isCompatible(jnr.ffi.Runtime other);
 
-    // TODO: 29-May-2021 @basshelal: document and test!
-    // TODO: 29-May-2021 @basshelal: Is library names actually a good unique key?
-    //  technically I can load multiple libC instances with different interfaces and paths so this mapping doesn't
-    //  accommodate this extreme contrivance
-    public abstract Map<List<String>, List<String>> getLoadedLibraryPaths();
 }
