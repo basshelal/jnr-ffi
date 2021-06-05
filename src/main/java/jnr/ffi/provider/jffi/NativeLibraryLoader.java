@@ -37,8 +37,7 @@ class NativeLibraryLoader<T>  extends jnr.ffi.LibraryLoader<T> {
 
     public T loadLibrary(Class<T> interfaceClass, Collection<String> libraryNames, Collection<String> searchPaths,
                              Map<LibraryOption, Object> options, boolean failImmediately) {
-        boolean loadNow = options.containsKey(LibraryOption.LoadNow);
-        NativeLibrary nativeLibrary = new NativeLibrary(libraryNames, searchPaths, loadNow);
+        NativeLibrary nativeLibrary = new NativeLibrary(libraryNames, searchPaths, options);
 
         try {
             return ASM_ENABLED

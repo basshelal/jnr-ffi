@@ -21,7 +21,7 @@ package jnr.ffi;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -412,13 +412,14 @@ public abstract class Platform {
     /**
      * Searches through a list of directories for a native library.
      *
-     * @param libName the base name (e.g. "c") of the library to locate
-     * @param libraryPath the list of directories to search
+     * @param libName      the base name (e.g. "c") of the library to locate
+     * @param libraryPaths the list of directories to search
      * @return the path of the library
      */
-    public String locateLibrary(String libName, List<String> libraryPath) {
+    // TODO: 05-Jun-2021 @basshelal: Better doc!
+    public String locateLibrary(String libName, List<String> libraryPaths) {
         String mappedName = mapLibraryName(libName);
-        for (String path : libraryPath) {
+        for (String path : libraryPaths) {
             File libFile = new File(path, mappedName);
             if (libFile.exists()) {
                 return libFile.getAbsolutePath();
@@ -426,6 +427,10 @@ public abstract class Platform {
         }
         // Default to letting the system search for it
         return mappedName;
+    }
+
+    public String locateLibrary(String libName, List<String> libraryPaths, Map<LibraryOption, Object> options) {
+        return locateLibrary(libName, libraryPaths);
     }
 
     /**
@@ -503,24 +508,66 @@ public abstract class Platform {
         }
 
     }
+
     /**
      * A {@link Platform} subclass representing the Linux operating system.
      */
     static final class Linux extends Supported {
+
+        private static class Match implements Comparable<Match> { // represents a valid library file
+            String path; // absolute path of library file
+            int[] version; // version of library, empty if no version specified
+            boolean isCustom; // if path is from a custom searchPath specified by user and not default path
+
+            @Override
+            public int compareTo(Match o) { // for Collections.sort() to work
+                return compareVersions(o.version, this.version);
+            }
+        }
 
         public Linux() {
             super(OS.LINUX);
         }
 
         @Override
-        public String locateLibrary(final String libName, List<String> libraryPaths) {
+        public String locateLibrary(String libName, List<String> libraryPaths) {
+            return locateLibrary(libName, libraryPaths, null);
+        }
+
+        @Override
+        public String locateLibrary(final String libName, List<String> libraryPaths,
+                                    Map<LibraryOption, Object> options) {
+            List<Match> matches = getMatches(libName, libraryPaths);
+            if (matches.isEmpty()) return mapLibraryName(libName); // no matches, default behavior returns mapped name
+
+            boolean preferCustom = options != null && options.containsKey(LibraryOption.PreferCustomPaths);
+
+            Collections.sort(matches); // sort by version, regardless of location
+
+            Match best = null;
+            if (preferCustom) {
+                for (Match match : matches) {
+                    if (match.isCustom) {
+                        best = match;
+                        break;
+                    }
+                }
+            }
+            return best != null ? best.path : matches.get(0).path;
+        }
+
+        private List<Match> getMatches(String libName, List<String> libraryPaths) {
+            List<String> customPaths = new ArrayList<>();
+            for (String path : libraryPaths) {
+                if (!LibraryLoader.DefaultLibPaths.PATHS.contains(path)) customPaths.add(path);
+            }
+
             Pattern exclude;
             // there are /libx32 directories in wild on ubuntu 14.04 and the
             // oracle-java8-installer package
             if (getCPU() == CPU.X86_64) {
                 exclude = Pattern.compile(".*(lib[a-z]*32|i[0-9]86).*"); // ignore 32 bit libs on 64-bit
-            }
-            else {
+            } else {
                 exclude = Pattern.compile(".*(lib[a-z]*64|amd64|x86_64).*"); // ignore 64 bit libs on 32-bit
             }
 
@@ -532,7 +579,7 @@ public abstract class Platform {
                 }
             };
 
-            Map<String, int[]> matches = new LinkedHashMap<String, int[]>();
+            List<Match> matches = new ArrayList<>();
             for (String path : libraryPaths) {
                 if (exclude.matcher(path).matches()) {
                     continue;
@@ -557,30 +604,14 @@ public abstract class Platform {
                             version[i - 1] = Integer.parseInt(parts[i]);
                         }
                     }
-                    matches.put(file.getAbsolutePath(), version);
+                    Match match = new Match();
+                    match.path = file.getAbsolutePath();
+                    match.version = version;
+                    match.isCustom = customPaths.contains(path);
+                    matches.add(match);
                 }
             }
-
-            // TODO: 29-May-2021 @basshelal: Issue #239
-            //  Below let custom path be preferred over system paths (found in LibraryLoader.DefaultLibPaths)
-            //  even if version is higher.
-            //  If we can add a LibraryOption for this then here is where it will be used
-
-            // Search through the results and return the highest numbered version
-            // i.e. libc.so.6 is preferred over libc.so.5 or libc.so
-            int[] bestVersion = null;
-            String bestMatch = null;
-            for (Map.Entry<String, int[]> entry : matches.entrySet()) {
-                String file = entry.getKey();
-                int[] fileVersion = entry.getValue();
-
-                if (compareVersions(fileVersion, bestVersion) > 0) {
-                    bestMatch = file;
-                    bestVersion = fileVersion;
-                }
-            }
-
-            return bestMatch != null ? bestMatch : mapLibraryName(libName);
+            return matches;
         }
 
         private static int compareVersions(int[] version1, int[] version2) {

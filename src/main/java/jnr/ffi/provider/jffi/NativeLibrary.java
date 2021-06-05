@@ -20,6 +20,7 @@ package jnr.ffi.provider.jffi;
 
 import com.kenai.jffi.Library;
 import jnr.ffi.LibraryLoader;
+import jnr.ffi.LibraryOption;
 import jnr.ffi.LoadedLibraryData;
 import jnr.ffi.Platform;
 import jnr.ffi.Runtime;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,26 +49,39 @@ import java.util.regex.Pattern;
  * An interface mapping of a library loaded with {@link AsmLibraryLoader} will always implement
  * {@link AbstractAsmLibraryInterface} which contains a strong reference to the {@link NativeLibrary} representing
  * the loaded library, see {@link AbstractAsmLibraryInterface#getLibrary()}
+ *
+ * An interface mapping of a library loaded with {@link ReflectionLibraryLoader} will only implement
+ * {@link jnr.ffi.provider.LoadedLibrary} but will also contain (deep in the object chain) a strong reference to the
+ * {@link NativeLibrary} representing the loaded library.
+ *
+ * If an instance of this class has been GC'd, it means that all instances of an interface mapping have been GC'd and
+ * the library can be (and will be) safely unloaded. This is reflected in {@link Runtime#getLoadedLibraries()} which
+ * will show all currently loaded libraries.
+ *
+ * @see LoadedLibraryData
  */
 class NativeLibrary {
     private final List<String> libraryNames;
     private final List<String> searchPaths;
     private final List<String> successfulPaths = new ArrayList<>();
+    private final Map<LibraryOption, Object> options;
 
     private volatile List<com.kenai.jffi.Library> nativeLibraries = Collections.emptyList();
 
-    NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths, boolean loadNow) {
+    NativeLibrary(Collection<String> libraryNames, Collection<String> searchPaths,
+                  Map<LibraryOption, Object> options) {
         this.libraryNames = Collections.unmodifiableList(new ArrayList<>(libraryNames));
         this.searchPaths = Collections.unmodifiableList(new ArrayList<>(searchPaths));
-        if (loadNow) getNativeLibraries();
+        this.options = options;
+        if (options.containsKey(LibraryOption.LoadNow)) getNativeLibraries();
     }
 
     private String locateLibrary(String libraryName) {
-        return Platform.getNativePlatform().locateLibrary(libraryName, searchPaths);
+        return Platform.getNativePlatform().locateLibrary(libraryName, searchPaths, options);
     }
 
     /**
-     * Gets the address of a symbol with the given name, 0 means the address was not found
+     * Gets the first address of a symbol with the given name, 0 means the address was not found
      */
     long getSymbolAddress(String name) {
         for (com.kenai.jffi.Library l : getNativeLibraries()) {
@@ -101,7 +116,7 @@ class NativeLibrary {
      * Theoretically, this should only ever be called once in a library's lifetime, upon first call of {@link #getNativeLibraries()}
      */
     private synchronized List<com.kenai.jffi.Library> loadNativeLibraries() {
-        List<com.kenai.jffi.Library> libs = new ArrayList<com.kenai.jffi.Library>();
+        List<com.kenai.jffi.Library> libs = new ArrayList<>();
 
         for (String libraryName : libraryNames) {
             if (libraryName == null) continue;
@@ -115,9 +130,8 @@ class NativeLibrary {
             // try opening ignoring searchPaths AND any name mapping, so just literal given name
             lib = openLibrary(libraryName, successfulPaths);
             if (lib == null) {
-                String path;
-                if ((path = locateLibrary(libraryName)) != null && !libraryName.equals(path)) {
-                    // try opening after using locateLibrary(), will map and use searchPaths
+                String path = locateLibrary(libraryName); // try opening with mapping and searchPaths
+                if (!libraryName.equals(path)) {
                     lib = openLibrary(path, successfulPaths);
                 }
             }
