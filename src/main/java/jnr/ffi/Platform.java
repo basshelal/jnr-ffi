@@ -402,7 +402,9 @@ public abstract class Platform {
      * @return The mapped library name.
      */
     public String mapLibraryName(String libName) {
+        //
         // A specific version was requested - use as is for search
+        //
         if (libPattern.matcher(libName).find()) {
             return libName;
         }
@@ -412,14 +414,13 @@ public abstract class Platform {
     /**
      * Searches through a list of directories for a native library.
      *
-     * @param libName      the base name (e.g. "c") of the library to locate
-     * @param libraryPaths the list of directories to search
+     * @param libName the base name (e.g. "c") of the library to locate
+     * @param libraryPath the list of directories to search
      * @return the path of the library
      */
-    // TODO: 05-Jun-2021 @basshelal: Better doc!
-    public String locateLibrary(String libName, List<String> libraryPaths) {
+    public String locateLibrary(String libName, List<String> libraryPath) {
         String mappedName = mapLibraryName(libName);
-        for (String path : libraryPaths) {
+        for (String path : libraryPath) {
             File libFile = new File(path, mappedName);
             if (libFile.exists()) {
                 return libFile.getAbsolutePath();
@@ -429,6 +430,15 @@ public abstract class Platform {
         return mappedName;
     }
 
+    /**
+     * Searches through a list of directories for a native library.
+     *
+     * @param libName      the base name (e.g. "c") of the library to locate
+     * @param libraryPaths the list of directories to search
+     * @param options      map of {@link LibraryOption}s to customize search behavior
+     *                     such as {@link LibraryOption#PreferCustomPaths}
+     * @return the path of the library
+     */
     public String locateLibrary(String libName, List<String> libraryPaths, Map<LibraryOption, Object> options) {
         return locateLibrary(libName, libraryPaths);
     }
@@ -495,7 +505,9 @@ public abstract class Platform {
 
         @Override
         public String mapLibraryName(String libName) {
+            //
             // A specific version was requested - use as is for search
+            //
             if (libPattern.matcher(libName).find()) {
                 return libName;
             }
@@ -514,7 +526,8 @@ public abstract class Platform {
      */
     static final class Linux extends Supported {
 
-        private static class Match implements Comparable<Match> { // represents a valid library file
+        // represents a valid library file that matches the search
+        private static class Match implements Comparable<Match> {
             String path; // absolute path of library file
             int[] version; // version of library, empty if no version specified
             boolean isCustom; // if path is from a custom searchPath specified by user and not default path
@@ -558,8 +571,19 @@ public abstract class Platform {
 
         private List<Match> getMatches(String libName, List<String> libraryPaths) {
             List<String> customPaths = new ArrayList<>();
-            for (String path : libraryPaths) {
-                if (!LibraryLoader.DefaultLibPaths.PATHS.contains(path)) customPaths.add(path);
+            if (LibraryLoader.DefaultLibPaths.PATHS.size() > 0 &&
+                    libraryPaths.size() >= LibraryLoader.DefaultLibPaths.PATHS.size()) {
+                // we were probably called by JNR-FFI, customs will always be before system paths
+                String firstSystemPath = LibraryLoader.DefaultLibPaths.PATHS.get(0);
+
+                // everything before last occurrence of first system path is custom
+                int firstSystemPathIndex = libraryPaths.lastIndexOf(firstSystemPath);
+                for (int i = 0; i < firstSystemPathIndex; i++) {
+                    customPaths.add(libraryPaths.get(i));
+                }
+            } else {
+                // we were probably called by user and not by JNR-FFI, assume all paths are custom
+                customPaths.addAll(libraryPaths);
             }
 
             Pattern exclude;
