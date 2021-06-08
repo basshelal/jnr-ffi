@@ -40,7 +40,6 @@ import jnr.ffi.LibraryOption;
 import jnr.ffi.Platform;
 import jnr.ffi.Runtime;
 
-public class NativeLibrary {
 /**
  * Represents a native library made up of potentially multiple native library files to create a "composite library".
  * This represents a single Java mapped interface which could be made up of multiple native library files.
@@ -62,7 +61,7 @@ public class NativeLibrary {
  *
  * @see LoadedLibraryData
  */
-class NativeLibrary {
+public class NativeLibrary {
     private final List<String> libraryNames;
     private final List<String> searchPaths;
     private final List<String> successfulPaths = new ArrayList<>();
