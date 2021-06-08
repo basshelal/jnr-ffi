@@ -18,15 +18,13 @@
 
 package jnr.ffi.provider;
 
+import java.nio.ByteOrder;
+
 import jnr.ffi.NativeType;
 import jnr.ffi.ObjectReferenceManager;
 import jnr.ffi.Runtime;
 import jnr.ffi.Type;
 import jnr.ffi.TypeAlias;
-
-import java.nio.ByteOrder;
-import java.util.List;
-import java.util.Map;
 
 /**
  * An invalid {@link jnr.ffi.Runtime} subclass that throws exceptions for all methods
