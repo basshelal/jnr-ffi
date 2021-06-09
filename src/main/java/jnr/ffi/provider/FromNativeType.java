@@ -18,16 +18,13 @@
 
 package jnr.ffi.provider;
 
+import java.lang.annotation.Annotation;
+import java.util.Collection;
+
 import jnr.ffi.NativeType;
 import jnr.ffi.mapper.FromNativeContext;
 import jnr.ffi.mapper.FromNativeConverter;
 
-import java.lang.annotation.Annotation;
-import java.util.Collection;
-
-/**
- *
- */
 public class FromNativeType extends SigType implements jnr.ffi.mapper.FromNativeType {
     private final FromNativeConverter fromNativeConverter;
     private final FromNativeContext fromNativeContext;

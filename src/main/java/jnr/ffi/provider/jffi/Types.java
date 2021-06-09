@@ -18,12 +18,6 @@
 
 package jnr.ffi.provider.jffi;
 
-import jnr.ffi.Address;
-import jnr.ffi.NativeType;
-import jnr.ffi.Pointer;
-import jnr.ffi.Type;
-import jnr.ffi.annotations.TypeDefinition;
-
 import java.lang.annotation.Annotation;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
@@ -34,10 +28,12 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+import jnr.ffi.Address;
+import jnr.ffi.NativeType;
+import jnr.ffi.Pointer;
+import jnr.ffi.Type;
+import jnr.ffi.annotations.TypeDefinition;
 
-/**
- *
- */
 class Types {
     private static Reference<Map<Class, Map<Collection<Annotation>, Type>>> typeCacheReference;
 

@@ -18,8 +18,5 @@
 
 package jnr.ffi.mapper;
 
-/**
- *
- */
 public interface DataConverter<J, N> extends ToNativeConverter<J, N>, FromNativeConverter<J, N> {
 }

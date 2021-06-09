@@ -18,16 +18,13 @@
 
 package jnr.ffi.provider;
 
-import jnr.ffi.NativeType;
-import jnr.ffi.mapper.SignatureType;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.Collection;
 
-/**
- *
- */
+import jnr.ffi.NativeType;
+import jnr.ffi.mapper.SignatureType;
+
 abstract public class SigType implements SignatureType {
     private final Class javaType, convertedType;
     private final Collection<Annotation> annotations;
@@ -40,6 +37,7 @@ abstract public class SigType implements SignatureType {
         this.nativeType = nativeType;
     }
 
+    @Override
     public final Class getDeclaredType() {
         return javaType;
     }
@@ -52,6 +50,7 @@ abstract public class SigType implements SignatureType {
         return annotations;
     }
 
+    @Override
     public final Collection<Annotation> getAnnotations() {
         return annotations;
     }
@@ -61,6 +60,7 @@ abstract public class SigType implements SignatureType {
         return getDeclaredType();
     }
 
+    @Override
     public final String toString() {
         return String.format("declared: %s, effective: %s, native: %s", getDeclaredType(), effectiveJavaType(), getNativeType());
     }

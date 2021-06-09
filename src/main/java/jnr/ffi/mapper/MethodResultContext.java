@@ -24,9 +24,6 @@ import java.util.Collection;
 
 import static jnr.ffi.util.Annotations.sortedAnnotationCollection;
 
-/**
- *
- */
 public class MethodResultContext implements FromNativeContext {
     private final jnr.ffi.Runtime runtime;
     private final Method method;

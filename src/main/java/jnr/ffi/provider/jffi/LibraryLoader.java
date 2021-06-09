@@ -18,6 +18,8 @@
 
 package jnr.ffi.provider.jffi;
 
+import java.util.Map;
+
 import jnr.ffi.LibraryOption;
 import jnr.ffi.Runtime;
 import jnr.ffi.mapper.CachingTypeMapper;
@@ -27,9 +29,18 @@ import jnr.ffi.mapper.SignatureTypeMapperAdapter;
 import jnr.ffi.mapper.TypeMapper;
 import jnr.ffi.provider.NullTypeMapper;
 
-import java.util.Map;
-
-public abstract class LibraryLoader {
+/**
+ * A {@code LibraryLoader} is responsible for converting a {@link NativeLibrary} into a usable JVM object that
+ * implements an interface that represents a mapping of that library. Basically, provide an implementation of the
+ * passed in interface that will internally be calling the {@link NativeLibrary}.
+ *
+ * Subclasses can use any techniques to do this they see fit, such as using reflection
+ * as is the case with {@link ReflectionLibraryLoader}.
+ *
+ * @see ReflectionLibraryLoader
+ * @see AsmLibraryLoader
+ */
+abstract class LibraryLoader {
 
     static SignatureTypeMapper getSignatureTypeMapper(Map<LibraryOption, ?> libraryOptions) {
         SignatureTypeMapper typeMapper;

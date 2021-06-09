@@ -18,6 +18,14 @@
 
 package jnr.ffi.provider.jffi;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+
 import jnr.ffi.CallingConvention;
 import jnr.ffi.LibraryOption;
 import jnr.ffi.Runtime;
@@ -33,14 +41,6 @@ import jnr.ffi.provider.LoadedLibrary;
 import jnr.ffi.provider.NativeFunction;
 import jnr.ffi.provider.NativeInvocationHandler;
 import jnr.ffi.provider.NativeVariable;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
 
 import static jnr.ffi.provider.jffi.InvokerUtil.getCallingConvention;
 import static jnr.ffi.util.Annotations.sortedAnnotationCollection;
@@ -85,10 +85,13 @@ class ReflectionLibraryLoader extends LibraryLoader {
 
         @Override
         public Object invoke(Object self, Object[] parameters) {
-            throw new UnsatisfiedLinkError(String.format("native method '%s' not found for method %s", functionName,  method));
+            throw new UnsatisfiedLinkError(String.format("native method '%s' not found for method %s", functionName, method));
         }
     }
 
+    /**
+     * The special invoker for the reserved method with the name "getRuntime" (from {@link LoadedLibrary#getRuntime()}
+     */
     private static final class GetRuntimeInvoker implements Invoker {
         private final jnr.ffi.Runtime runtime;
 
@@ -102,6 +105,12 @@ class ReflectionLibraryLoader extends LibraryLoader {
         }
     }
 
+    /**
+     * A mapping from a Java {@link Method} to an {@link Invoker}, this represents the mapping between the Java
+     * interface method to the native invokable function or symbol
+     *
+     * @param <T> the type of the mapping interface
+     */
     private static final class LazyLoader<T> extends AbstractMap<Method, Invoker> {
         private final DefaultInvokerFactory invokerFactory;
         private final jnr.ffi.Runtime runtime = NativeRuntime.getInstance();
