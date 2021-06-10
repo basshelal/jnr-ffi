@@ -31,7 +31,10 @@ import jnr.ffi.types.u_int64_t;
 import jnr.ffi.types.u_int8_t;
 
 /**
+ * An X86 disassembler used to log and debug generated asm code, this is only used when debugging.
  *
+ * For this to work you must have the <a href="https://github.com/vmt/udis86">udis86 library</a>
+ * installed on your system.
  */
 class X86Disassembler {
 

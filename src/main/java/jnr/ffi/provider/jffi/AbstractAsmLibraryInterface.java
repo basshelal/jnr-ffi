@@ -21,7 +21,7 @@ package jnr.ffi.provider.jffi;
 import jnr.ffi.provider.LoadedLibrary;
 
 /**
- *
+ * Every library loaded with {@link AsmLibraryLoader} extends this class
  */
 public abstract class AbstractAsmLibraryInterface implements LoadedLibrary {
     public static final com.kenai.jffi.Invoker ffi = com.kenai.jffi.Invoker.getInstance();

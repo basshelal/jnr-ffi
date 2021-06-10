@@ -65,6 +65,15 @@ import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.V1_8;
 
+/**
+ * A {@link LibraryLoader} that is designed for maximum performance by utilizing the fastest and lowest level
+ * constructs to call native library functions
+ *
+ * If possible, native machine code (that calls the native function) will be generated and inserted to be called when
+ * the interface mapping's function is called. This is the fastest most ideal scenario but may not always happen.
+ *
+ * This is done by generating JVM bytecode
+ */
 public class AsmLibraryLoader extends LibraryLoader {
     public final static boolean DEBUG = Boolean.getBoolean("jnr.ffi.compile.dump");
     private static final AtomicLong nextClassID = new AtomicLong(0);
