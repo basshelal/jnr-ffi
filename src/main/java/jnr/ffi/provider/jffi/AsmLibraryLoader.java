@@ -69,10 +69,12 @@ import static org.objectweb.asm.Opcodes.V1_8;
  * A {@link LibraryLoader} that is designed for maximum performance by utilizing the fastest and lowest level
  * constructs to call native library functions
  *
- * If possible, native machine code (that calls the native function) will be generated and inserted to be called when
- * the interface mapping's function is called. This is the fastest most ideal scenario but may not always happen.
+ * When possible, native machine code (that calls the native function) will be generated and inserted to be called when
+ * the interface mapping's method is called. This is equivalent to having the interface mapping method be
+ * implemented as a {@code native} method. This is the fastest most ideal scenario but may not always happen.
  *
- * This is done by generating JVM bytecode
+ * Otherwise, JVM bytecode is generated and inserted as the implementation to the interface mapping's method
+ * todo continue docs
  */
 public class AsmLibraryLoader extends LibraryLoader {
     public final static boolean DEBUG = Boolean.getBoolean("jnr.ffi.compile.dump");
@@ -124,13 +126,13 @@ public class AsmLibraryLoader extends LibraryLoader {
 
         final MethodGenerator[] generators = {
                 !interfaceClass.isAnnotationPresent(NoX86.class)
-                    ? new X86MethodGenerator(compiler) : new NotImplMethodGenerator(),
+                        ? new X86MethodGenerator(compiler) : new NotImplMethodGenerator(),
                 new FastIntMethodGenerator(),
                 new FastLongMethodGenerator(),
                 new FastNumericMethodGenerator(),
                 new BufferMethodGenerator()
         };
-        
+
         DefaultInvokerFactory invokerFactory = new DefaultInvokerFactory(runtime, library, typeMapper, functionMapper, libraryCallingConvention, libraryOptions, interfaceClass.isAnnotationPresent(Synchronized.class));
         InterfaceScanner scanner = new InterfaceScanner(interfaceClass, typeMapper, libraryCallingConvention);
 
@@ -145,7 +147,7 @@ public class AsmLibraryLoader extends LibraryLoader {
 
             try {
                 long functionAddress = library.findSymbolAddress(functionName);
-                
+
                 FromNativeContext resultContext = new MethodResultContext(runtime, function.getMethod());
                 SignatureType signatureType = DefaultSignatureType.create(function.getMethod().getReturnType(), resultContext);
                 ResultType resultType = getResultType(runtime, function.getMethod().getReturnType(),
@@ -156,8 +158,8 @@ public class AsmLibraryLoader extends LibraryLoader {
 
                 boolean saveError = jnr.ffi.LibraryLoader.saveError(libraryOptions, function.hasSaveError(), function.hasIgnoreError());
 
-                Function jffiFunction = new Function(functionAddress, 
-                        getCallContext(resultType, parameterTypes,function.convention(), saveError));
+                Function jffiFunction = new Function(functionAddress,
+                        getCallContext(resultType, parameterTypes, function.convention(), saveError));
 
                 for (MethodGenerator g : generators) {
                     if (g.isSupported(resultType, parameterTypes, function.convention())) {
@@ -167,9 +169,10 @@ public class AsmLibraryLoader extends LibraryLoader {
                 }
 
             } catch (SymbolNotFoundError ex) {
+                // TODO: 10-Jun-2021 @basshelal: If consumers want instant fail for not found functions, put it here
                 String errorFieldName = "error_" + uniqueId.incrementAndGet();
                 cv.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, errorFieldName, ci(String.class), null, ex.getMessage());
-                generateFunctionNotFound(cv, builder.getClassNamePath(), errorFieldName, functionName, 
+                generateFunctionNotFound(cv, builder.getClassNamePath(), errorFieldName, functionName,
                         function.getMethod().getReturnType(), function.getMethod().getParameterTypes());
             }
         }
@@ -189,6 +192,7 @@ public class AsmLibraryLoader extends LibraryLoader {
                         typeMapper, classLoader);
 
             } catch (SymbolNotFoundError ex) {
+                // TODO: 10-Jun-2021 @basshelal: If consumers want instant fail for not found functions, put it here
                 String errorFieldName = "error_" + uniqueId.incrementAndGet();
                 cv.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, errorFieldName, ci(String.class), null, ex.getMessage());
                 generateFunctionNotFound(cv, builder.getClassNamePath(), errorFieldName, functionName, m.getReturnType(), m.getParameterTypes());
@@ -238,7 +242,7 @@ public class AsmLibraryLoader extends LibraryLoader {
     }
 
     private void generateFunctionNotFound(ClassVisitor cv, String className, String errorFieldName, String functionName,
-                                                Class returnType, Class[] parameterTypes) {
+                                          Class returnType, Class[] parameterTypes) {
         SkinnyMethodAdapter mv = new SkinnyMethodAdapter(cv, ACC_PUBLIC | ACC_FINAL, functionName,
                 sig(returnType, parameterTypes), null, null);
         mv.start();
@@ -262,11 +266,11 @@ public class AsmLibraryLoader extends LibraryLoader {
 
         //Push ref to this
         mv.aload(0);
-        
+
         //Construct the params array
         mv.pushInt(parameterTypes.length);
         mv.anewarray(p(Object.class));
-        
+
         int slot = 1;
         for (int i = 0; i < parameterTypes.length; i++) {
             mv.dup();
@@ -307,10 +311,10 @@ public class AsmLibraryLoader extends LibraryLoader {
             mv.aastore();
             slot++;
         }
-        
+
         // call invoker(this, parameters)
         mv.invokeinterface(jnr.ffi.provider.Invoker.class, "invoke", Object.class, Object.class, Object[].class);
-        
+
         Class<?> returnType = m.getReturnType();
         if (returnType.equals(long.class)) {
             mv.checkcast(Long.class);
@@ -345,12 +349,12 @@ public class AsmLibraryLoader extends LibraryLoader {
             mv.invokevirtual(Boolean.class, "booleanValue", boolean.class);
             mv.ireturn();
         } else if (void.class.isAssignableFrom(m.getReturnType())) {
-           mv.voidreturn();
+            mv.voidreturn();
         } else {
             mv.checkcast(m.getReturnType());
             mv.areturn();
         }
-        
+
         mv.visitMaxs(100, AsmUtil.calculateLocalVariableSpace(parameterTypes) + 1);
         mv.visitEnd();
     }

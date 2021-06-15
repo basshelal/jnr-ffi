@@ -20,6 +20,7 @@ package jnr.ffi.provider.jffi;
 
 import com.kenai.jffi.CallContext;
 import com.kenai.jffi.Platform;
+
 import jnr.ffi.CallingConvention;
 import jnr.ffi.NativeType;
 import jnr.ffi.Pointer;
@@ -31,9 +32,6 @@ import static jnr.ffi.provider.jffi.CodegenUtils.ci;
 import static jnr.ffi.provider.jffi.NumberUtil.sizeof;
 import static jnr.ffi.provider.jffi.Util.getBooleanProperty;
 
-/**
- *
- */
 final class FastIntMethodGenerator extends AbstractFastNumericMethodGenerator {
     private static final boolean ENABLED = getBooleanProperty("jnr.ffi.fast-int.enabled", true);
     private static final int MAX_FASTINT_PARAMETERS = getMaximumFastIntParameters();

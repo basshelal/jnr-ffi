@@ -22,15 +22,17 @@ import com.kenai.jffi.CallContext;
 import com.kenai.jffi.Function;
 import com.kenai.jffi.ObjectParameterInfo;
 import com.kenai.jffi.Platform;
+
+import org.objectweb.asm.Label;
+
+import java.util.concurrent.atomic.AtomicLong;
+
 import jnr.ffi.CallingConvention;
 import jnr.ffi.NativeType;
 import jnr.ffi.Pointer;
 import jnr.ffi.provider.ParameterType;
 import jnr.ffi.provider.ResultType;
 import jnr.ffi.provider.SigType;
-import org.objectweb.asm.Label;
-
-import java.util.concurrent.atomic.AtomicLong;
 
 import static jnr.ffi.provider.jffi.AbstractFastNumericMethodGenerator.emitDirectCheck;
 import static jnr.ffi.provider.jffi.AbstractFastNumericMethodGenerator.emitParameterStrategyLookup;
@@ -53,6 +55,7 @@ import static org.objectweb.asm.Opcodes.ACC_STATIC;
 /**
  *
  */
+// TODO: 10-Jun-2021 @basshelal: Name is misleading! Can be used in aarch64 as well
 class X86MethodGenerator implements MethodGenerator {
     private static final boolean ENABLED = getBooleanProperty("jnr.ffi.x86asm.enabled", true);
     private final AtomicLong nextMethodID = new AtomicLong(0);
@@ -69,6 +72,7 @@ class X86MethodGenerator implements MethodGenerator {
 
         final Platform platform = Platform.getPlatform();
 
+        // TODO: 10-Jun-2021 @basshelal: Why don't we support Windows??
         if (platform.getOS().equals(Platform.OS.WINDOWS)) {
             return false;
         }

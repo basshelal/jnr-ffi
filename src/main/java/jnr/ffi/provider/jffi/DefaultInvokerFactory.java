@@ -22,6 +22,22 @@ import com.kenai.jffi.Function;
 import com.kenai.jffi.HeapInvocationBuffer;
 import com.kenai.jffi.ObjectParameterStrategy;
 import com.kenai.jffi.ObjectParameterType;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.nio.LongBuffer;
+import java.nio.ShortBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import jnr.ffi.Address;
 import jnr.ffi.CallingConvention;
 import jnr.ffi.LibraryLoader;
@@ -50,21 +66,6 @@ import jnr.ffi.provider.ParameterType;
 import jnr.ffi.provider.ResultType;
 import jnr.ffi.provider.SigType;
 import jnr.ffi.util.AnnotationProxy;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.DoubleBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
-import java.nio.ShortBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 import static jnr.ffi.provider.jffi.InvokerUtil.getCallContext;
 import static jnr.ffi.provider.jffi.InvokerUtil.getParameterTypes;
@@ -105,6 +106,7 @@ final class DefaultInvokerFactory {
         String functionName = functionMapper.mapFunctionName(method.getName(), new NativeFunctionMapperContext(library, annotations));
         long functionAddress = library.getSymbolAddress(functionName);
         if (functionAddress == 0L) {
+            // TODO: 10-Jun-2021 @basshelal: If consumers want instant fail for not found functions, put it here
             return new FunctionNotFoundInvoker(method, functionName);
         }
 
@@ -140,6 +142,8 @@ final class DefaultInvokerFactory {
 
             return new DefaultInvoker(runtime, library, function, functionInvoker, marshallers);
         }
+
+        // TODO: 09-Jun-2021 @basshelal: What if method is not varargs but want synchronization?
 
         //
         // If either the method or the library is specified as requiring
@@ -284,12 +288,32 @@ final class DefaultInvokerFactory {
 
         } else if (type.isArray() && type.getComponentType() == boolean.class) {
             return new PrimitiveArrayMarshaller(PrimitiveArrayParameterStrategy.BOOLEAN, annotations);
-        
+
         } else {
             throw new IllegalArgumentException("Unsupported parameter type: " + type);
         }
     }
 
+    private static boolean isUnsigned(NativeType nativeType) {
+        switch (nativeType) {
+            case UCHAR:
+            case USHORT:
+            case UINT:
+            case ULONG:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    // ----------------------------------------------------------------
+    //                             Invokers
+    // ----------------------------------------------------------------
+
+    /**
+     * {@link Invoker} for {@link Method}s with varargs parameters
+     */
     static class VariadicInvoker implements jnr.ffi.provider.Invoker {
         private final jnr.ffi.Runtime runtime;
         private final FunctionInvoker functionInvoker;
@@ -301,10 +325,10 @@ final class DefaultInvokerFactory {
         private final CallingConvention callingConvention;
 
         VariadicInvoker(Runtime runtime,
-                FunctionInvoker functionInvoker, SignatureTypeMapper typeMapper,
-                ParameterType[] fixedParameterTypes, long functionAddress,
-                SigType resultType, boolean requiresErrno,
-                CallingConvention callingConvention) {
+                        FunctionInvoker functionInvoker, SignatureTypeMapper typeMapper,
+                        ParameterType[] fixedParameterTypes, long functionAddress,
+                        SigType resultType, boolean requiresErrno,
+                        CallingConvention callingConvention) {
             super();
             this.runtime = runtime;
             this.functionInvoker = functionInvoker;
@@ -346,24 +370,24 @@ final class DefaultInvokerFactory {
                     }
 
                     argTypes[fixedParameterTypes.length + variableArgsCount - 1] = new ParameterType(
-                            argClass, 
-                            Types.getType(runtime, argClass, annos).getNativeType(), 
-                            annos, 
-                            toNativeConverter, 
+                            argClass,
+                            Types.getType(runtime, argClass, annos).getNativeType(),
+                            annos,
+                            toNativeConverter,
                             new SimpleNativeContext(runtime, annos));
                     variableArgsCount++;
                 }
             }
-            
+
             //Add one extra vararg of NULL to meet the common convention of ending
             //varargs with a NULL.  Functions that get a length from the fixed arguments
             //will ignore the extra, and funtions that expect the extra NULL will get it.
             //This matches what JNA does.
             argTypes[fixedParameterTypes.length + variableArgsCount - 1] = new ParameterType(
-                    Pointer.class, 
-                    Types.getType(runtime, Pointer.class, Collections.<Annotation>emptyList()).getNativeType(), 
-                    Collections.<Annotation>emptyList(), 
-                    null, 
+                    Pointer.class,
+                    Types.getType(runtime, Pointer.class, Collections.<Annotation>emptyList()).getNativeType(),
+                    Collections.<Annotation>emptyList(),
+                    null,
                     new SimpleNativeContext(runtime, Collections.<Annotation>emptyList()));
             variableArgs[variableArgsCount] = null;
             variableArgsCount++;
@@ -377,7 +401,7 @@ final class DefaultInvokerFactory {
                 if (parameters != null) for (int i = 0; i < parameters.length - 1; ++i) {
                     getMarshaller(argTypes[i]).marshal(session, buffer, parameters[i]);
                 }
-                
+
                 for (int i = 0; i < variableArgsCount; ++i) {
                     getMarshaller(argTypes[i + fixedParameterTypes.length - 1]).marshal(session, buffer, variableArgs[i]);
                 }
@@ -387,13 +411,13 @@ final class DefaultInvokerFactory {
                 session.finish();
             }
         }
-        
+
         private static Collection<Annotation> getAnnotations(Collection<Class<? extends Annotation>> klasses) {
             List<Annotation> ret = new ArrayList<Annotation>();
             for (Class<? extends Annotation> klass : klasses) {
                 if (klass.getAnnotation(Meta.class) != null) {
                     for (Annotation anno : klass.getAnnotations()) {
-                        if (anno.annotationType().getName().startsWith("java") 
+                        if (anno.annotationType().getName().startsWith("java")
                                 || Meta.class.equals(anno.annotationType())) {
                             continue;
                         }
@@ -437,8 +461,12 @@ final class DefaultInvokerFactory {
         }
     }
 
+    /**
+     * {@link Invoker} for {@link Method}s with the {@link Synchronized} annotation applicable to them
+     */
     private static final class SynchronizedInvoker implements Invoker {
         private final Invoker invoker;
+
         public SynchronizedInvoker(Invoker invoker) {
             this.invoker = invoker;
         }
@@ -451,6 +479,9 @@ final class DefaultInvokerFactory {
         }
     }
 
+    /**
+     * Error {@link Invoker} used for when the native function was not found
+     */
     private static final class FunctionNotFoundInvoker implements Invoker {
         private final Method method;
         private final String functionName;
@@ -462,14 +493,21 @@ final class DefaultInvokerFactory {
 
         @Override
         public Object invoke(Object self, Object[] parameters) {
-            throw new UnsatisfiedLinkError(String.format("native method '%s' not found for method %s", functionName,  method));
+            throw new UnsatisfiedLinkError(String.format("native method '%s' not found for method %s", functionName, method));
         }
     }
 
+    /**
+     * Responsible for preparing and putting a Java type parameter into a {@link HeapInvocationBuffer} ready to
+     * be invoked later by an {@link Invoker}
+     */
     static interface Marshaller {
         public abstract void marshal(InvocationSession session, HeapInvocationBuffer buffer, Object parameter);
     }
 
+    /**
+     * Responsible for invoking the native function
+     */
     static interface FunctionInvoker {
         Object invoke(Runtime runtime, Function function, HeapInvocationBuffer buffer);
     }
@@ -538,14 +576,19 @@ final class DefaultInvokerFactory {
 
     static class PointerInvoker extends BaseInvoker {
         static final FunctionInvoker INSTANCE = new PointerInvoker();
+
         public final Object invoke(Runtime runtime, Function function, HeapInvocationBuffer buffer) {
             return MemoryUtil.newPointer(runtime, invoker.invokeAddress(function, buffer));
         }
     }
 
-    /* ---------------------------------------------------------------------- */
+    // ----------------------------------------------------------------
+    //                           Marshallers
+    // ----------------------------------------------------------------
+
     static class BooleanMarshaller implements Marshaller {
         static final Marshaller INSTANCE = new BooleanMarshaller();
+
         public void marshal(InvocationSession session, HeapInvocationBuffer buffer, Object parameter) {
             buffer.putInt(((Boolean) parameter).booleanValue() ? 1 : 0);
         }
@@ -679,21 +722,12 @@ final class DefaultInvokerFactory {
                 session.keepAlive(nativeValue);
             }
         }
-        
+
     }
 
-    private static boolean isUnsigned(NativeType nativeType) {
-        switch (nativeType) {
-            case UCHAR:
-            case USHORT:
-            case UINT:
-            case ULONG:
-                return true;
-
-            default:
-                return false;
-        }
-    }
+    // ----------------------------------------------------------------
+    //                            Converters
+    // ----------------------------------------------------------------
 
     static DataConverter<Number, Number> getNumberDataConverter(NativeType nativeType) {
         switch (nativeType) {
